@@ -12,6 +12,14 @@ from .decoding import decode as decode_function
 from .decoding import detect_language as detect_language_function
 from .transcribe import transcribe as transcribe_function
 
+from typing import Any
+from torch.nn.modules.module import T
+
+class CustomSequential(nn.Sequential):
+    def forward(self, input: T, *args: Any) -> T:
+        for module in self:
+            input = module(input, *args)
+        return input
 
 @dataclass
 class ModelDimensions:
@@ -25,7 +33,7 @@ class ModelDimensions:
     n_text_state: int
     n_text_head: int
     n_text_layer: int
-
+    
 
 class LayerNorm(nn.LayerNorm):
     def forward(self, x: Tensor) -> Tensor:
@@ -42,12 +50,15 @@ class Linear(nn.Linear):
 
 
 class Conv1d(nn.Conv1d):
-    def _conv_forward(
-        self, x: Tensor, weight: Tensor, bias: Optional[Tensor]
-    ) -> Tensor:
-        return super()._conv_forward(
-            x, weight.to(x.dtype), None if bias is None else bias.to(x.dtype)
-        )
+    # def _conv_forward(
+    #     self, x: Tensor, weight: Tensor, bias: Optional[Tensor]
+    # ) -> Tensor:
+    #     return super()._conv_forward(
+    #         x, weight.to(x.dtype), None if bias is None else bias.to(x.dtype)
+    #     )
+
+    def _conv_forward(self, input: Tensor, *args: Any) -> Tensor:
+        return super().forward(input, *args)
 
 
 def sinusoids(length, channels, max_timescale=10000):
